@@ -104,6 +104,7 @@ function helpText(): string {
     '**Trading:**',
     '  /poly buy <token-id> <size> <price>      - Buy shares (limit)',
     '  /poly sell <token-id> <size> <price>     - Sell shares (limit)',
+    '  (buy/sell are simulated while paper trading mode is on)',
     '  /poly orders                             - Open orders',
     '  /poly cancel <order-id>                  - Cancel order',
     '  /poly cancel all                         - Cancel all orders',
@@ -298,7 +299,86 @@ async function handleOrderbook(tokenId: string): Promise<string> {
 // TRADING HANDLERS
 // =============================================================================
 
+/**
+ * Route an order into the paper ledger when paper trading is enabled for the
+ * calling user. Returns null when paper mode is off (real trading proceeds),
+ * or a response string that replaces the real order path entirely.
+ *
+ * Fails closed: if the paper-trading state cannot be read, no real order is
+ * placed.
+ */
+export async function paperTradeGuard(
+  side: 'buy' | 'sell',
+  tokenId: string,
+  sizeStr?: string,
+  priceStr?: string,
+  deps?: {
+    db?: Awaited<ReturnType<typeof import('../../../db').initDatabase>>;
+    userId?: string;
+  }
+): Promise<string | null> {
+  const { getSkillExecutionContext } = await import('../../context');
+  const userId = deps?.userId ?? getSkillExecutionContext()?.userId;
+
+  // No user identity (e.g. standalone CLI): preserve legacy behaviour
+  if (!userId) return null;
+  if (!tokenId || !sizeStr) return null;
+
+  let isEnabled: boolean;
+  let db: Awaited<ReturnType<typeof import('../../../db').initDatabase>>;
+  try {
+    const { initDatabase } = await import('../../../db');
+    const { isPaperTradingEnabled } = await import('../../../trading/paper-ledger');
+    db = deps?.db ?? await initDatabase();
+    isEnabled = isPaperTradingEnabled(db, userId);
+  } catch (error) {
+    logger.warn({ error }, 'Could not read paper trading state; refusing to place a real order');
+    return '🧪 Could not verify paper-trading state, so no order was placed. Try again.';
+  }
+
+  if (!isEnabled) return null;
+
+  const size = parseFloat(sizeStr);
+  const price = priceStr ? parseFloat(priceStr) : NaN;
+
+  if (isNaN(size) || size <= 0) {
+    return 'Invalid size. Must be a positive number.';
+  }
+
+  if (!Number.isFinite(price)) {
+    return `🧪 Paper trading is on, so this order would be simulated. Include a limit price: \`/poly ${side} <token-id> <size> <price>\`.`;
+  }
+
+  const { recordPaperTrade } = await import('../../../trading/paper-ledger');
+  const result = recordPaperTrade(db, userId, { marketId: tokenId, side, size, price });
+
+  if (!result.ok) {
+    return `🧪 Paper trade rejected: ${result.error}`;
+  }
+
+  const fill = result.fill;
+  const lines = [
+    '🧪 PAPER TRADE — simulated, no order was sent',
+    `${fill.side.toUpperCase()} ${fill.size} shares ${fill.outcome} @ ${Math.round(fill.price * 100)}¢ ($${fill.notional.toFixed(2)})`,
+    `Market: ${fill.market.length > 40 ? fill.market.slice(0, 40) + '…' : fill.market}`,
+    `Balance: $${fill.balance.toFixed(2)}`,
+  ];
+
+  if (fill.side === 'sell') {
+    lines.push(`Realized P&L: ${fill.realizedPnl >= 0 ? '+' : ''}$${fill.realizedPnl.toFixed(2)}`);
+    lines.push(`Remaining: ${fill.remainingShares} shares`);
+  } else {
+    lines.push(`Position: ${fill.positionSize} shares @ ${Math.round((fill.avgEntry ?? fill.price) * 100)}¢`);
+  }
+
+  lines.push('_Disable paper trading to place real orders._');
+  return lines.join('\n');
+}
+
 async function handleBuy(tokenId: string, sizeStr: string, priceStr: string): Promise<string> {
+  const paper = await paperTradeGuard('buy', tokenId, sizeStr, priceStr);
+  if (paper) return paper;
+
   const exec = getExecution();
   if (!exec) {
     return 'Set POLY_API_KEY, POLY_API_SECRET, and POLY_API_PASSPHRASE to trade on Polymarket.';
@@ -412,6 +492,9 @@ async function handleBuy(tokenId: string, sizeStr: string, priceStr: string): Pr
 }
 
 async function handleSell(tokenId: string, sizeStr: string, priceStr: string): Promise<string> {
+  const paper = await paperTradeGuard('sell', tokenId, sizeStr, priceStr);
+  if (paper) return paper;
+
   const exec = getExecution();
   if (!exec) {
     return 'Set POLY_API_KEY, POLY_API_SECRET, and POLY_API_PASSPHRASE to trade on Polymarket.';

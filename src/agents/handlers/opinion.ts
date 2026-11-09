@@ -148,13 +148,36 @@ async function quoteTokensHandler(): Promise<HandlerResult> {
 /**
  * opinion_place_order - Place an order
  */
-async function placeOrderHandler(toolInput: ToolInput, _context: HandlerContext): Promise<HandlerResult> {
+async function placeOrderHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
   const marketId = toolInput.market_id as number;
   const tokenId = toolInput.token_id as string;
   const side = toolInput.side as 'BUY' | 'SELL';
   const price = toolInput.price as number;
   const amount = toolInput.amount as number;
   const orderType = (toolInput.order_type as 'LIMIT' | 'MARKET') ?? 'LIMIT';
+
+  // Paper trading: simulate the fill instead of calling the Opinion API
+  const { isPaperTradingEnabled, recordPaperTrade } = await import('../../trading/paper-ledger');
+  if (context.userId && isPaperTradingEnabled(context.db, context.userId)) {
+    const simulated = recordPaperTrade(context.db, context.userId, {
+      marketId: String(tokenId || marketId),
+      outcome: 'YES',
+      side: String(side).toLowerCase() === 'sell' ? 'sell' : 'buy',
+      size: Number(amount),
+      price: Number(price),
+    });
+    if (!simulated.ok) {
+      return JSON.stringify({ error: `Paper trade rejected: ${simulated.error}` });
+    }
+    return JSON.stringify({
+      result: 'Paper trade filled (simulated, no order sent)',
+      orderId: `paper-${simulated.fill.side}-${Date.now()}`,
+      filledSize: simulated.fill.size,
+      avgFillPrice: simulated.fill.price,
+      status: 'filled',
+      paper: true,
+    });
+  }
 
   const config = getTradingConfig();
 

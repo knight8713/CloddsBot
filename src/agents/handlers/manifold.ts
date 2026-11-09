@@ -60,11 +60,27 @@ const CRED_ERROR = JSON.stringify({
 // TRADING HANDLERS (require auth + risk checks)
 // =============================================================================
 
+/**
+ * Manifold bets post straight to the Manifold API, so they are refused in
+ * paper trading mode rather than silently placing a real bet.
+ */
+async function paperModeBlock(context: HandlerContext): Promise<HandlerResult | null> {
+  const { isPaperTradingEnabled } = await import('../../trading/paper-ledger');
+  if (!context.userId || !isPaperTradingEnabled(context.db, context.userId)) return null;
+  return JSON.stringify({
+    paper: true,
+    error: 'Paper trading is on. Manifold bets are not simulated — use paper_trade to record this position instead.',
+  });
+}
+
 // 1. manifold_bet
 async function betHandler(
   toolInput: ToolInput,
   context: HandlerContext
 ): Promise<HandlerResult> {
+  const paper = await paperModeBlock(context);
+  if (paper) return paper;
+
   const apiKey = getManifoldApiKey(context);
   if (!apiKey) return CRED_ERROR;
 
@@ -123,6 +139,9 @@ async function sellHandler(
   toolInput: ToolInput,
   context: HandlerContext
 ): Promise<HandlerResult> {
+  const paper = await paperModeBlock(context);
+  if (paper) return paper;
+
   const apiKey = getManifoldApiKey(context);
   if (!apiKey) return CRED_ERROR;
 
@@ -168,6 +187,9 @@ async function multipleChoiceHandler(
   toolInput: ToolInput,
   context: HandlerContext
 ): Promise<HandlerResult> {
+  const paper = await paperModeBlock(context);
+  if (paper) return paper;
+
   const apiKey = getManifoldApiKey(context);
   if (!apiKey) return CRED_ERROR;
 
@@ -208,6 +230,9 @@ async function multiBetHandler(
   toolInput: ToolInput,
   context: HandlerContext
 ): Promise<HandlerResult> {
+  const paper = await paperModeBlock(context);
+  if (paper) return paper;
+
   const apiKey = getManifoldApiKey(context);
   if (!apiKey) return CRED_ERROR;
 

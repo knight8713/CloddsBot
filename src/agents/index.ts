@@ -31,6 +31,8 @@ import { ToolRegistry, inferToolMetadata, CORE_TOOL_NAMES, detectToolHints, type
 import { createSkillManager, SkillManager } from '../skills/loader';
 import { FeedManager } from '../feeds';
 import { Database } from '../db';
+import { isPaperTradingEnabled } from '../trading/paper-ledger';
+import { createPaperExecutionService } from '../trading/paper-execution';
 import type { CredentialsManager } from '../types';
 // credentials module is private (gitignored) — lazy-load at runtime
 const _credPath = '../credentials/index.js';
@@ -1045,6 +1047,22 @@ function buildTools(): ToolDefinition[] {
         properties: {
           starting_balance: { type: 'number', description: 'New starting balance', default: 10000 },
         },
+      },
+    },
+    {
+      name: 'paper_trade',
+      description: 'Record a simulated (paper) buy or sell. Updates the virtual balance, open positions and realized P&L without sending any order to an exchange.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          market_id: { type: 'string', description: 'Market condition ID or slug' },
+          market_name: { type: 'string', description: 'Human-readable market name (defaults to market_id)' },
+          outcome: { type: 'string', description: 'Outcome being traded, e.g. YES or NO', default: 'YES' },
+          side: { type: 'string', enum: ['buy', 'sell'], description: 'buy to open or increase, sell to reduce' },
+          size: { type: 'number', description: 'Number of shares' },
+          price: { type: 'number', description: 'Price per share in USDC (0-1)' },
+        },
+        required: ['market_id', 'side', 'size', 'price'],
       },
     },
     {
@@ -17157,6 +17175,23 @@ export async function createAgentManager(
     // Add execution service if available
     if (executionService) {
       tradingContext.executionService = executionService;
+    }
+
+    // Paper trading: every order this user places through the agent goes to the
+    // simulated ledger instead, so real orders are impossible while it is on.
+    try {
+      if (isPaperTradingEnabled(db, session.userId)) {
+        tradingContext.executionService = createPaperExecutionService({
+          db,
+          userId: session.userId,
+          base: tradingContext.executionService,
+        });
+        tradingContext.dryRun = true;
+      }
+    } catch (error) {
+      logger.warn({ error, userId: session.userId }, 'Could not read paper trading state; using simulated execution');
+      tradingContext.executionService = createPaperExecutionService({ db, userId: session.userId });
+      tradingContext.dryRun = true;
     }
 
     // Helper to add to conversation history
