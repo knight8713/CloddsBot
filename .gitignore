@@ -41,6 +41,9 @@ apps/
 # TypeScript cache
 *.tsbuildinfo
 
+# Local embedding model cache (postinstall, src/embeddings)
+.transformers-cache/
+
 # Local config
 .vercel/
 
