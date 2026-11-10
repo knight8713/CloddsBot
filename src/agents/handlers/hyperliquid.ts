@@ -9,7 +9,7 @@ import type { ToolInput, HandlerResult, HandlersMap, HandlerContext } from './ty
 import { errorResult } from './types';
 import type { HyperliquidConfig } from '../../exchanges/hyperliquid';
 import * as hyperliquid from '../../exchanges/hyperliquid';
-import { guardTrade } from './trading-guard';
+import { guardTrade, blockInPaperMode } from './trading-guard';
 
 // =============================================================================
 // HELPERS
@@ -149,6 +149,9 @@ async function longHandler(
   toolInput: ToolInput,
   context: HandlerContext
 ): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'hyperliquid_long');
+  if (paperBlock) return paperBlock;
+
   const env = getHyperliquidConfig();
   if (!env) return errorResult('Set HYPERLIQUID_WALLET and HYPERLIQUID_PRIVATE_KEY');
   const coin = toolInput.coin as string;
@@ -191,6 +194,9 @@ async function shortHandler(
   toolInput: ToolInput,
   context: HandlerContext
 ): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'hyperliquid_short');
+  if (paperBlock) return paperBlock;
+
   const env = getHyperliquidConfig();
   if (!env) return errorResult('Set HYPERLIQUID_WALLET and HYPERLIQUID_PRIVATE_KEY');
   const coin = toolInput.coin as string;
@@ -233,6 +239,9 @@ async function closeHandler(
   toolInput: ToolInput,
   context: HandlerContext
 ): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'hyperliquid_close');
+  if (paperBlock) return paperBlock;
+
   const env = getHyperliquidConfig();
   if (!env) return errorResult('Set HYPERLIQUID_WALLET and HYPERLIQUID_PRIVATE_KEY');
   const coin = toolInput.coin as string;
@@ -303,8 +312,11 @@ async function cancelAllHandler(
 
 async function leverageHandler(
   toolInput: ToolInput,
-  _context: HandlerContext
+  context: HandlerContext
 ): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'hyperliquid_leverage');
+  if (paperBlock) return paperBlock;
+
   const env = getHyperliquidConfig();
   if (!env) return errorResult('Set HYPERLIQUID_WALLET and HYPERLIQUID_PRIVATE_KEY');
   const coin = toolInput.coin as string;

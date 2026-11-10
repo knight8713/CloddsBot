@@ -11,6 +11,7 @@
  */
 
 import type { ToolInput, HandlerResult, HandlersMap, HandlerContext } from './types';
+import { blockInPaperMode } from './trading-guard';
 import { safeHandler } from './types';
 import { validatePreTrade } from '../../trading/pre-trade';
 
@@ -119,6 +120,9 @@ async function addressHandler(): Promise<HandlerResult> {
 // ============================================================================
 
 async function jupiterSwapHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'solana_jupiter_swap');
+  if (paperBlock) return paperBlock;
+
   const inputMint = toolInput.input_mint as string;
   const outputMint = toolInput.output_mint as string;
   const amount = toolInput.amount as string;
@@ -157,6 +161,9 @@ async function jupiterSwapHandler(toolInput: ToolInput, context: HandlerContext)
 // ============================================================================
 
 async function raydiumSwapHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'raydium_swap');
+  if (paperBlock) return paperBlock;
+
   return safeHandler(async () => {
     const { wallet, raydium, jupiter } = await getSolanaModules();
     const inputMint = toolInput.input_mint as string;
@@ -219,6 +226,9 @@ async function raydiumQuoteHandler(toolInput: ToolInput): Promise<HandlerResult>
 // ============================================================================
 
 async function orcaSwapHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'orca_whirlpool_swap');
+  if (paperBlock) return paperBlock;
+
   return safeHandler(async () => {
     const { wallet, orca, jupiter } = await getSolanaModules();
     const inputMint = toolInput.input_mint as string;
@@ -273,6 +283,9 @@ async function orcaQuoteHandler(toolInput: ToolInput): Promise<HandlerResult> {
 // ============================================================================
 
 async function meteoraSwapHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'meteora_dlmm_swap');
+  if (paperBlock) return paperBlock;
+
   return safeHandler(async () => {
     const { wallet, meteora, jupiter } = await getSolanaModules();
     const inputMint = toolInput.input_mint as string;
@@ -331,7 +344,10 @@ async function meteoraQuoteHandler(toolInput: ToolInput): Promise<HandlerResult>
 // Pump.fun Handlers
 // ============================================================================
 
-async function pumpfunTradeHandler(toolInput: ToolInput): Promise<HandlerResult> {
+async function pumpfunTradeHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'pumpfun_trade');
+  if (paperBlock) return paperBlock;
+
   const action = toolInput.action as 'buy' | 'sell';
   const mint = toolInput.mint as string;
   const amountRaw = toolInput.amount as string;
@@ -788,7 +804,10 @@ async function swarmBalancesHandler(): Promise<HandlerResult> {
   });
 }
 
-async function swarmBuyHandler(toolInput: ToolInput): Promise<HandlerResult> {
+async function swarmBuyHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'swarm_buy');
+  if (paperBlock) return paperBlock;
+
   const mint = toolInput.mint as string;
   const amountPerWallet = toolInput.amount_per_wallet as number;
   const walletIds = toolInput.wallet_ids as string[] | undefined;
@@ -860,7 +879,10 @@ async function swarmBuyHandler(toolInput: ToolInput): Promise<HandlerResult> {
   }, 'Swarm buy failed. Ensure SOLANA_PRIVATE_KEY and swarm keys are set.');
 }
 
-async function swarmSellHandler(toolInput: ToolInput): Promise<HandlerResult> {
+async function swarmSellHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'swarm_sell');
+  if (paperBlock) return paperBlock;
+
   const mint = toolInput.mint as string;
   const amountPerWallet = toolInput.amount_per_wallet as number | string;
   const walletIds = toolInput.wallet_ids as string[] | undefined;
@@ -1115,7 +1137,10 @@ async function swarmPresetDeleteHandler(toolInput: ToolInput): Promise<HandlerRe
 // Drift Handlers
 // ============================================================================
 
-async function driftPlaceOrderHandler(toolInput: ToolInput): Promise<HandlerResult> {
+async function driftPlaceOrderHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'drift_direct_place_order');
+  if (paperBlock) return paperBlock;
+
   return safeHandler(async () => {
     const { wallet, drift } = await getSolanaModules();
     const keypair = wallet.loadSolanaKeypair();
@@ -1180,7 +1205,10 @@ async function driftBalanceHandler(): Promise<HandlerResult> {
   });
 }
 
-async function driftModifyOrderHandler(toolInput: ToolInput): Promise<HandlerResult> {
+async function driftModifyOrderHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'drift_direct_modify_order');
+  if (paperBlock) return paperBlock;
+
   return safeHandler(async () => {
     const { wallet, drift } = await getSolanaModules();
     const keypair = wallet.loadSolanaKeypair();
@@ -1194,7 +1222,10 @@ async function driftModifyOrderHandler(toolInput: ToolInput): Promise<HandlerRes
   });
 }
 
-async function driftSetLeverageHandler(toolInput: ToolInput): Promise<HandlerResult> {
+async function driftSetLeverageHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'drift_direct_set_leverage');
+  if (paperBlock) return paperBlock;
+
   return safeHandler(async () => {
     const { wallet, drift } = await getSolanaModules();
     const keypair = wallet.loadSolanaKeypair();
@@ -1240,6 +1271,9 @@ async function autoRouteHandler(toolInput: ToolInput): Promise<HandlerResult> {
 }
 
 async function autoSwapHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'solana_auto_swap');
+  if (paperBlock) return paperBlock;
+
   const amount = toolInput.amount as string;
   const slippageBps = toolInput.slippage_bps as number | undefined;
   const sortBy = toolInput.sort_by as 'liquidity' | 'volume24h' | undefined;
@@ -1432,6 +1466,9 @@ async function bagsQuoteHandler(toolInput: ToolInput): Promise<HandlerResult> {
 }
 
 async function bagsSwapHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'bags_swap');
+  if (paperBlock) return paperBlock;
+
   const inputMint = toolInput.input_mint as string;
   const outputMint = toolInput.output_mint as string;
   const amount = toolInput.amount as string;

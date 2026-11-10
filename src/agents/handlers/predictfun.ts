@@ -318,6 +318,15 @@ async function createOrderHandler(
     }
   }
 
+  // Paper trading never falls back to a direct real order
+  const { isPaperTradingEnabled } = await import('../../trading/paper-ledger');
+  if (context.userId && isPaperTradingEnabled(context.db, context.userId)) {
+    return JSON.stringify({
+      paper: true,
+      error: 'Paper trading is on and the simulated fill was rejected, so no real order was placed.',
+    });
+  }
+
   // Fallback: Direct call with env vars
   const config = getPredictFunConfig();
   if (!config) {

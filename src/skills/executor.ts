@@ -28,6 +28,7 @@
  */
 
 import { logger } from '../utils/logger';
+import { runWithSkillContext, type SkillExecutionContext } from './context';
 
 // =============================================================================
 // SKILL MANIFEST - all bundled skill directory names
@@ -973,7 +974,14 @@ export function getSkillManifest(): string[] {
  * @param message - The full message text (e.g., "/bf balance")
  * @returns Result of execution
  */
-export async function executeSkillCommand(message: string): Promise<SkillExecutionResult> {
+export async function executeSkillCommand(
+  message: string,
+  context?: SkillExecutionContext
+): Promise<SkillExecutionResult> {
+  return runWithSkillContext(context ?? {}, () => executeSkillCommandInternal(message));
+}
+
+async function executeSkillCommandInternal(message: string): Promise<SkillExecutionResult> {
   // Ensure skills are loaded on first invocation
   await initializeSkills();
 

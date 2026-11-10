@@ -6,6 +6,7 @@
 
 import type { ToolInput, HandlerResult, HandlersMap, HandlerContext } from './types';
 import { errorResult, successResult } from './types';
+import { recordPaperTrade } from '../../trading/paper-ledger';
 
 // =============================================================================
 // PAPER TRADING HANDLERS
@@ -176,12 +177,70 @@ async function paperHistoryHandler(
   });
 }
 
+async function paperTradeHandler(
+  toolInput: ToolInput,
+  context: HandlerContext
+): Promise<HandlerResult> {
+  if (!context.userId) {
+    return errorResult('User ID not available');
+  }
+
+  const result = recordPaperTrade(context.db, context.userId, {
+    marketId: String(toolInput.market_id ?? ''),
+    marketName: String(toolInput.market_name ?? ''),
+    outcome: String(toolInput.outcome ?? 'YES'),
+    side: String(toolInput.side ?? ''),
+    size: Number(toolInput.size),
+    price: Number(toolInput.price),
+  });
+
+  if (!result.ok) {
+    return errorResult(result.error);
+  }
+
+  const fill = result.fill;
+  const base = {
+    status: 'filled (simulated)',
+    side: fill.side.toUpperCase(),
+    outcome: fill.outcome,
+    market: fill.market,
+    size: fill.size,
+    price: `${Math.round(fill.price * 100)}¢`,
+    balance: `$${fill.balance.toFixed(2)}`,
+    note: 'Simulated fill — no order was sent to any exchange.',
+  };
+
+  if (fill.side === 'buy') {
+    return successResult({
+      result: {
+        ...base,
+        notional: `$${fill.notional.toFixed(2)}`,
+        position: {
+          outcome: fill.outcome,
+          size: fill.positionSize,
+          avgEntry: `${Math.round((fill.avgEntry ?? fill.price) * 100)}¢`,
+        },
+      },
+    });
+  }
+
+  return successResult({
+    result: {
+      ...base,
+      proceeds: `$${fill.notional.toFixed(2)}`,
+      realizedPnl: `${fill.realizedPnl >= 0 ? '+' : ''}$${fill.realizedPnl.toFixed(2)}`,
+      remainingShares: fill.remainingShares,
+    },
+  });
+}
+
 // =============================================================================
 // EXPORT HANDLERS MAP
 // =============================================================================
 
 export const paperTradingHandlers: HandlersMap = {
   paper_trading_mode: paperTradingModeHandler,
+  paper_trade: paperTradeHandler,
   paper_balance: paperBalanceHandler,
   paper_positions: paperPositionsHandler,
   paper_reset: paperResetHandler,

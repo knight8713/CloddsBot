@@ -18,8 +18,29 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci
-      - name: Typecheck, test, build
-        run: npm run ci
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        shell: bash
+        run: |
+          # node --test exits non-zero with "fail 0" when a test file cannot be
+          # loaded, so require both a clean exit code and a clean summary.
+          set -o pipefail
+          set +e
+          npm test 2>&1 | tee test-output.log
+          status=${PIPESTATUS[0]}
+          set -e
+          summary=$(grep -E '^ℹ fail ' test-output.log | tail -1 || true)
+          if [ "$status" -ne 0 ] || [ "$summary" != "ℹ fail 0" ]; then
+            echo "::error::npm test failed (exit $status, summary: ${summary:-missing})"
+            grep -E '^(✖|not ok)|Cannot find module|MODULE_NOT_FOUND' test-output.log || true
+            exit 1
+          fi
+          echo "$summary"
+
+      - name: Build
+        run: npm run build
       - name: Security audit
         run: npx --yes audit-ci --config audit-ci.jsonc --high --production
 

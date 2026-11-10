@@ -713,6 +713,14 @@ async function multivariateEventsHandler(_toolInput: ToolInput, _context: Handle
  * kalshi_create_order_group - Create an order group
  */
 async function createOrderGroupHandler(toolInput: ToolInput, context: HandlerContext): Promise<HandlerResult> {
+  const { isPaperTradingEnabled } = await import('../../trading/paper-ledger');
+  if (context.userId && isPaperTradingEnabled(context.db, context.userId)) {
+    return JSON.stringify({
+      paper: true,
+      error: 'Paper trading is on. Kalshi order groups create real orders, so this is disabled in paper mode.',
+    });
+  }
+
   const auth = requireAuth(context);
   if (typeof auth === 'string') return auth;
   const orders = toolInput.orders as unknown[];

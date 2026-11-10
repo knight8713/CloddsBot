@@ -9,7 +9,7 @@ import type { ToolInput, HandlerResult, HandlersMap, HandlerContext } from './ty
 import { errorResult, successResult } from './types';
 import type { BinanceFuturesConfig } from '../../exchanges/binance-futures';
 import * as binanceFutures from '../../exchanges/binance-futures';
-import { guardTrade } from './trading-guard';
+import { guardTrade, blockInPaperMode } from './trading-guard';
 
 // =============================================================================
 // HELPERS
@@ -110,6 +110,9 @@ async function longHandler(
   toolInput: ToolInput,
   context: HandlerContext
 ): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'binance_futures_long');
+  if (paperBlock) return paperBlock;
+
   const env = getBinanceConfig();
   if (!env) return errorResult('Set BINANCE_API_KEY and BINANCE_API_SECRET');
   const symbol = toolInput.symbol as string;
@@ -145,6 +148,9 @@ async function shortHandler(
   toolInput: ToolInput,
   context: HandlerContext
 ): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'binance_futures_short');
+  if (paperBlock) return paperBlock;
+
   const env = getBinanceConfig();
   if (!env) return errorResult('Set BINANCE_API_KEY and BINANCE_API_SECRET');
   const symbol = toolInput.symbol as string;
@@ -180,6 +186,9 @@ async function closeHandler(
   toolInput: ToolInput,
   context: HandlerContext
 ): Promise<HandlerResult> {
+  const paperBlock = blockInPaperMode(context, 'binance_futures_close');
+  if (paperBlock) return paperBlock;
+
   const env = getBinanceConfig();
   if (!env) return errorResult('Set BINANCE_API_KEY and BINANCE_API_SECRET');
   const symbol = toolInput.symbol as string;

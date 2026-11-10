@@ -324,7 +324,7 @@ export function createCommandsService(
             }
 
             // Execute the skill command
-            const result = await executeSkillCommand(text);
+            const result = await executeSkillCommand(text, { userId: session.userId, platform: message.platform });
             if (result.handled) {
               logger.info({ command, skill: result.skill }, 'Skill command executed');
               return {
