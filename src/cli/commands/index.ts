@@ -10,7 +10,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, rmSync
 import { join } from 'path';
 import { homedir } from 'os';
 import { getHooksDir, loadHooksState, removeHookSourceState, setHookSourceEnabled, resolveHookStateKey, loadHookStateStore, saveHookStateStore } from '../../hooks';
-import { createDatabase } from '../../db';
+import { createDatabase, initDatabase } from '../../db';
 import { createMigrationRunner } from '../../db/migrations';
 import { execApprovals } from '../../permissions';
 import type { User } from '../../types';
@@ -253,6 +253,7 @@ export function createCronCommands(program: Command): void {
     .description('Manage scheduled cron jobs');
 
   const withDb = async <T,>(fn: (db: ReturnType<typeof createDatabase>) => T | Promise<T>) => {
+    await initDatabase();
     const db = createDatabase();
     createMigrationRunner(db).migrate();
     try {
@@ -571,6 +572,7 @@ export function createUserCommands(program: Command): void {
     .description('Manage users and per-user settings');
 
   const withDb = async <T,>(fn: (db: ReturnType<typeof createDatabase>) => T | Promise<T>) => {
+    await initDatabase();
     const db = createDatabase();
     createMigrationRunner(db).migrate();
     try {
@@ -817,6 +819,7 @@ export function createMemoryCommands(program: Command): void {
     .description('Manage memory');
 
   const withDb = async <T,>(fn: (db: ReturnType<typeof createDatabase>) => T | Promise<T>) => {
+    await initDatabase();
     const db = createDatabase();
     createMigrationRunner(db).migrate();
     try {
@@ -1756,6 +1759,7 @@ export function createUsageCommands(program: Command): void {
     .description('View usage statistics');
 
   const withDb = async <T,>(fn: (db: ReturnType<typeof createDatabase>) => T | Promise<T>) => {
+    await initDatabase();
     const db = createDatabase();
     createMigrationRunner(db).migrate();
     try {
@@ -2597,6 +2601,7 @@ export function createLedgerCommands(program: Command): void {
     .description('Trade ledger - decision audit trail');
 
   const withDb = async <T,>(fn: (db: ReturnType<typeof createDatabase>) => T | Promise<T>) => {
+    await initDatabase();
     const db = createDatabase();
     createMigrationRunner(db).migrate();
     try {
@@ -3412,6 +3417,7 @@ export function createDoctorCommand(program: Command): void {
       }
 
       try {
+        await initDatabase();
         const db = createDatabase();
         const runner = createMigrationRunner(db);
         runner.migrate();

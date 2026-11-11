@@ -23,7 +23,7 @@ import { join } from 'path';
 dotenvConfig({ path: join(homedir(), '.clodds', '.env') });
 dotenvConfig();
 import { Command } from 'commander';
-import { createDatabase } from '../db/index';
+import { createDatabase, initDatabase } from '../db/index';
 import { createMigrationRunner } from '../db/migrations';
 import { createPairingService } from '../pairing/index';
 import { createGateway } from '../gateway/index';
@@ -37,14 +37,24 @@ import { addAllCommands } from './commands/index';
 import { startRepl } from './commands/repl';
 import { runSecure } from './secure';
 
+// Resolve the async sql.js initialization before any command uses the
+// synchronous database API (including migrations).
+async function openDatabase() {
+  await initDatabase();
+  return createDatabase();
+}
+
 const program = new Command();
 installHttpClient();
 
 process.on('unhandledRejection', (reason) => {
-  logger.error({ reason }, 'Unhandled promise rejection');
+  logger.error(
+    { err: reason instanceof Error ? reason : new Error(String(reason)) },
+    'Unhandled promise rejection'
+  );
 });
 process.on('uncaughtException', (error) => {
-  logger.error({ error }, 'Uncaught exception');
+  logger.error({ err: error }, 'Uncaught exception');
   process.exit(1);
 });
 
@@ -104,7 +114,7 @@ pairing
   .command('list <channel>')
   .description('List pending pairing requests for a channel')
   .action(async (channel: string) => {
-    const db = createDatabase();
+    const db = await openDatabase();
     createMigrationRunner(db).migrate();
     const pairingService = createPairingService(db);
 
@@ -134,7 +144,7 @@ pairing
   .command('approve <channel> <code>')
   .description('Approve a pairing request')
   .action(async (channel: string, code: string) => {
-    const db = createDatabase();
+    const db = await openDatabase();
     createMigrationRunner(db).migrate();
     const pairingService = createPairingService(db);
 
@@ -155,7 +165,7 @@ pairing
   .command('reject <channel> <code>')
   .description('Reject a pairing request')
   .action(async (channel: string, code: string) => {
-    const db = createDatabase();
+    const db = await openDatabase();
     createMigrationRunner(db).migrate();
     const pairingService = createPairingService(db);
 
@@ -174,7 +184,7 @@ pairing
   .command('users <channel>')
   .description('List paired users for a channel')
   .action(async (channel: string) => {
-    const db = createDatabase();
+    const db = await openDatabase();
     createMigrationRunner(db).migrate();
     const pairingService = createPairingService(db);
 
@@ -205,7 +215,7 @@ pairing
   .option('-u, --username <username>', 'Username for the user')
   .description('Set a user as owner (can approve pairings via chat)')
   .action(async (channel: string, userId: string, options: { username?: string }) => {
-    const db = createDatabase();
+    const db = await openDatabase();
     createMigrationRunner(db).migrate();
     const pairingService = createPairingService(db);
 
@@ -220,7 +230,7 @@ pairing
   .command('remove-owner <channel> <userId>')
   .description('Remove owner status from a user')
   .action(async (channel: string, userId: string) => {
-    const db = createDatabase();
+    const db = await openDatabase();
     createMigrationRunner(db).migrate();
     const pairingService = createPairingService(db);
 
@@ -234,7 +244,7 @@ pairing
   .command('owners <channel>')
   .description('List all owners for a channel')
   .action(async (channel: string) => {
-    const db = createDatabase();
+    const db = await openDatabase();
     createMigrationRunner(db).migrate();
     const pairingService = createPairingService(db);
 
@@ -259,7 +269,7 @@ pairing
   .option('-u, --username <username>', 'Username for the user')
   .description('Manually add a user to the paired list')
   .action(async (channel: string, userId: string, options: { username?: string }) => {
-    const db = createDatabase();
+    const db = await openDatabase();
     createMigrationRunner(db).migrate();
     const pairingService = createPairingService(db);
 
@@ -273,7 +283,7 @@ pairing
   .command('remove <channel> <userId>')
   .description('Remove a user from the paired list')
   .action(async (channel: string, userId: string) => {
-    const db = createDatabase();
+    const db = await openDatabase();
     createMigrationRunner(db).migrate();
     const pairingService = createPairingService(db);
 
@@ -318,7 +328,7 @@ program
   .command('status')
   .description('Show Clodds status')
   .action(async () => {
-    const db = createDatabase();
+    const db = await openDatabase();
     createMigrationRunner(db).migrate();
     const pairingService = createPairingService(db);
 
