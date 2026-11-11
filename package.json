@@ -128,7 +128,6 @@
     "express": "^4.18.2",
     "fast-xml-parser": "^5.3.7",
     "figlet": "^1.10.0",
-    "glob": "^10.3.10",
     "grammy": "^1.40.0",
     "hyperliquid": "^1.7.7",
     "inquirer": "^9.2.14",
@@ -136,7 +135,7 @@
     "json5": "^2.2.3",
     "mammoth": "^1.11.0",
     "node-cron": "^3.0.3",
-    "nodemailer": "^9.1.1",
+    "nodemailer": "^10.5.0",
     "pg": "^8.17.2",
     "pino": "^8.18.0",
     "pino-pretty": "^10.3.1",
@@ -147,7 +146,7 @@
     "unofficial-opinion-clob-sdk": "^0.1.10",
     "ws": "^8.16.0",
     "yaml": "^2.3.4",
-    "zod": "^3.22.4"
+    "zod": "^4.6.7"
   },
   "overrides": {
     "axios": "^1.13.5",
@@ -165,7 +164,9 @@
     "@cosmjs/cosmwasm-stargate": "^0.38.1",
     "@solana/kit": "^5.0.0",
     "sharp": "$sharp",
-    "toml": "^4.2.0"
+    "toml": "^5.0.1",
+    "@grpc/grpc-js": "^1.14.7",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

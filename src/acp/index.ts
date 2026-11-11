@@ -211,6 +211,9 @@ export class AgentRegistry extends EventEmitter {
         }
       }
     }, this.heartbeatInterval);
+    // Do not keep short-lived CLI processes alive just because the registry
+    // exists at module load. The timer still fires while the gateway runs.
+    this.heartbeatChecker.unref();
   }
 
   /** Stop the registry */

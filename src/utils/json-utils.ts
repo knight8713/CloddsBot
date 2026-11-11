@@ -127,7 +127,7 @@ export const SessionStorageSchema = z.object({
       joinedAt: z.string(),
       lastSeen: z.string(),
     })),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
   })).optional().default([]),
 });
 

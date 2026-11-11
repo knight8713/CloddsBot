@@ -1442,7 +1442,7 @@ export function createMigrationRunner(db: Database): MigrationRunner {
 
       logger.info({ version: migration.version }, 'Migration applied');
     } catch (error) {
-      logger.error({ error, version: migration.version }, 'Migration failed');
+      logger.error({ err: error, version: migration.version }, 'Migration failed');
       throw error;
     }
   }
@@ -1473,7 +1473,7 @@ export function createMigrationRunner(db: Database): MigrationRunner {
 
       logger.info({ version: migration.version }, 'Migration reverted');
     } catch (error) {
-      logger.error({ error, version: migration.version }, 'Rollback failed');
+      logger.error({ err: error, version: migration.version }, 'Rollback failed');
       throw error;
     }
   }

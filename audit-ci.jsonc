@@ -15,12 +15,6 @@
   "moderate": true,
   "production": true,
   "allowlist": [
-    // @grpc/grpc-js — via @drift-labs/sdk. Fix requires @drift-labs/sdk@2.141.0, a
-    // semver-major bump needing Node >=24 (this repo targets Node 22) — not a safe
-    // drop-in for a live trading integration verified working this session.
-    "GHSA-5375-pq7m-f5r2",
-    "GHSA-99f4-grh7-6pcq",
-
     // protobufjs / protobuf.js — transitive through @project-serum/anchor and the
     // wider Solana SDK tree (Orca, Kamino, Raydium's own transitive deps, etc.), all
     // of which pin old @solana/web3.js internally. No fix without forcing a
@@ -49,6 +43,17 @@
     // helpers. The only production consumer is jayson, which imports StreamValues and
     // Verifier instead. jayson 4.3 pins stream-json 1.x and is incompatible with the
     // patched 3.x module paths, so forcing the major would break Solana RPC parsing.
-    "GHSA-528h-pc64-c93x"
+    // The JSONC-rescan advisory only applies when jsonc parsing is enabled (web3.js
+    // does not enable it), and the Assembler advisory only affects Assembler, which
+    // web3.js's Client-based RPC path does not use.
+    "GHSA-528h-pc64-c93x",
+    "GHSA-hqr4-qq8f-hg3x",
+    "GHSA-mjw6-4jj6-33hc",
+
+    // minimatch — no patched release exists for the globparts-amplification advisory.
+    // The production path is nyc -> glob@7 inside @kamino's farms-sdk; forcing
+    // minimatch 11 there marks the tree invalid and breaks glob@7's CommonJS call
+    // signature, so there is no safe upgrade until the upstream SDKs move off glob@7.
+    "GHSA-g3hv-75wg-m249"
   ]
 }

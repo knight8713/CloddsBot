@@ -4898,6 +4898,11 @@ export async function initDatabase(): Promise<Database> {
 
 // Sync wrapper for backwards compatibility
 export function createDatabase(): Database {
+  // Reuse the initialized instance when it is ready. This lets synchronous
+  // callers (CLI commands, skills) get the real database instead of the async
+  // proxy after `initDatabase()` has completed.
+  if (dbInstance) return dbInstance;
+
   // Return a proxy that initializes lazily
   let initialized = false;
   let db: Database;
